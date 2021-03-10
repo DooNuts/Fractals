@@ -1,0 +1,62 @@
+import pygame
+
+width, height = 1000, 800
+win = (width, height)
+screen = pygame.display.set_mode(win)
+xAxis = 4/300
+yAxis = xAxis * height / width
+camX = -0.5
+camY = 0.61
+iterations = 300
+lim = 4
+m = 0
+
+# zoom 300, camX -0.5, camY 0.61
+# Linear = int(255 * m) % 255
+# Sinusoidal = int(255 * (-math.cos(math.pi * m) + 1) / 2) % 255
+# Square = int(255 * (m * m + 1)) % 255
+
+
+def frac(a, b):
+    ca = a
+    cb = b
+    n = 0
+    while a * a + b * b < lim and n < iterations:
+        ai = a * a - b * b
+        bi = 2 * a * b
+
+        a = ai + ca
+        b = bi + cb
+        n += 1
+    return n
+
+
+def col(m):
+    lin = int(255 * m) % 255
+    r = lin
+    g = lin
+    b = lin
+    return r, g, b
+
+xOffset = (-xAxis / 2) + camX
+yOffset = (-yAxis / 2) - camY
+ratio = xAxis / width
+for x in range(width):
+    for y in range(height):
+
+        a = (x * ratio) + xOffset
+        b = (y * ratio) + yOffset
+        m = frac(a, b) / iterations
+        screen.set_at((x, y), col(m))
+
+pygame.display.update()
+
+run = True
+while run:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+    keys = pygame.key.get_pressed()
+
+
+
