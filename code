@@ -1,13 +1,14 @@
 import pygame
+import time
 
-width, height = 1000, 800
+width, height = 800, 800
 win = (width, height)
 screen = pygame.display.set_mode(win)
 xAxis = 4/300
 yAxis = xAxis * height / width
 camX = -0.5
 camY = 0.61
-iterations = 300
+iterations = 200
 lim = 4
 m = 0
 
@@ -15,6 +16,8 @@ m = 0
 # Linear = int(255 * m) % 255
 # Sinusoidal = int(255 * (-math.cos(math.pi * m) + 1) / 2) % 255
 # Square = int(255 * (m * m + 1)) % 255
+
+t1 = time.perf_counter()
 
 
 def frac(a, b):
@@ -38,6 +41,7 @@ def col(m):
     b = lin
     return r, g, b
 
+
 xOffset = (-xAxis / 2) + camX
 yOffset = (-yAxis / 2) - camY
 ratio = xAxis / width
@@ -51,12 +55,13 @@ for x in range(width):
 
 pygame.display.update()
 
+t2 = time.perf_counter()
+print(t2 - t1)
+
 run = True
 while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
     keys = pygame.key.get_pressed()
-
-
 
