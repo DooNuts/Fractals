@@ -6,7 +6,7 @@ from multiprocessing import Pool
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
-width, height = 800, 800
+width, height = 1920, 1080
 zoom = 0.3
 zoom_factor = 2
 xAxis = 1 / zoom
@@ -14,8 +14,8 @@ yAxis = height / (width * zoom)
 camX = -0.5
 camY = 0
 iterations = 100
-iterations_factor = 2
-lim = 4
+iterations_factor = 1.4
+lim = 40
 
 # zoom 300, camX -0.5, camY 0.61
 # lin = int(255 * m) % 255
@@ -35,7 +35,7 @@ def frac(x, y, rat, xOff, yOff, iter):
     cb = b
     n = 0
     dist = 0
-    while a * a + b * b < lim and n < iter:
+    while a + b < lim and n < iter:
         ai = a * a - b * b
         bi = 2 * a * b
 
@@ -91,7 +91,7 @@ def proc():
     p.close()
     p.join()
     array = np.asarray(pixels)
-    reshaped_array = array.reshape(height, width, 3)
+    reshaped_array = array.reshape(width, height, 3)
 
     pygame.surfarray.blit_array(screen, reshaped_array)
     t2 = time.perf_counter()
@@ -108,7 +108,6 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 control(pygame.mouse.get_pos(), event.button)
             pygame.display.update()
-
 
 
 if __name__ == '__main__':
