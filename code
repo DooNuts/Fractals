@@ -1,19 +1,18 @@
 import pygame
 import time
 import numpy as np
-import math
 from multiprocessing import Pool
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
-width, height = 1920, 1080
+width, height = 400, 400
 zoom = 0.3
 zoom_factor = 2
 xAxis = 1 / zoom
 yAxis = height / (width * zoom)
 camX = -0.5
 camY = 0
-iterations = 100
+iterations = 50
 iterations_factor = 1.4
 lim = 40
 
@@ -34,7 +33,7 @@ def frac(x, y, rat, xOff, yOff, iter):
     ca = a
     cb = b
     n = 0
-    dist = 0
+    # change lim condition to a * a + b * b < lim for normal effect
     while a + b < lim and n < iter:
         ai = a * a - b * b
         bi = 2 * a * b
@@ -42,13 +41,14 @@ def frac(x, y, rat, xOff, yOff, iter):
         a = ai + ca
         b = bi + cb
         n += 1
+
     m = n / iter
 
-    m = math.sqrt(m)
+    # m = np.sqrt(m)
     lin = int(255 * m) % 255
-    sin = int(255 * (-math.cos(math.pi * m) + 1) / 2) % 255
-    sqrt = int(255 * math.sqrt(m)) % 255
-    sqr = int(255 * (m * m + 1)) % 255
+    sin = int(255 * (-np.cos(np.pi * m) + 1) / 2) % 255
+    sqrt = int(255 * np.sqrt(m)) % 255
+    sqr = int(255 * (m * m)) % 255
     r = sqr
     g = lin
     b = sin
@@ -74,11 +74,10 @@ def control(mouse, button):
         iterations = int(iterations * iterations_factor)
     elif button == 5:
         iterations = int(iterations / iterations_factor)
-
     main()
 
 
-def proc():
+def process():
     t1 = time.perf_counter()
     win = (width, height)
     screen = pygame.display.set_mode(win)
@@ -86,20 +85,26 @@ def proc():
     for x in range(width):
         for y in range(height):
             pix.append((x, y, ratio, xOffset, yOffset, iterations))
+
     p = Pool()
     pixels = p.starmap(frac, pix)
     p.close()
     p.join()
-    array = np.asarray(pixels)
-    reshaped_array = array.reshape(width, height, 3)
 
-    pygame.surfarray.blit_array(screen, reshaped_array)
+    # array = np.asarray(pixels)
+    # reshaped_array = array.reshape(width, height, 3)
+    # pygame.surfarray.blit_array(screen, reshaped_array)
+
+    for x in range(width):
+        for y in range(height):
+            screen.set_at((y, x), pixels[y * width + x])
+
     t2 = time.perf_counter()
     print(t2 - t1)
 
 
 def main():
-    proc()
+    process()
     run = True
     while run:
         for event in pygame.event.get():
