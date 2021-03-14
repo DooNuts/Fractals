@@ -42,7 +42,7 @@ def frac(x, y, rat, xOff, yOff, iter):
         n += 1
 
     m = n / iter
-
+    
     # m = np.sqrt(m)
     lin = int(255 * m) % 255
     sin = int(255 * (-np.cos(np.pi * m) + 1) / 2) % 255
