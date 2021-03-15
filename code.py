@@ -115,6 +115,9 @@ def control(mouse, button):
 
 
 def draw(screen, pool):
+    """
+    calculates and draws the new pixel values to the screen
+    """
     t0 = time.perf_counter()
 
     pixels = pool.starmap(mandelbrot_XY, [
@@ -136,7 +139,14 @@ def draw(screen, pool):
     print("draw-perf:", time.perf_counter() - t0)
 
 
+# the only events we're interested int
+PYGAME_EVENTS = (pygame.QUIT, pygame.MOUSEBUTTONUP)
+
+
 def main(pool):
+    """
+    The main method which loops forever intercepting events from pygame
+    """
     # init the screen
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
@@ -144,14 +154,14 @@ def main(pool):
     draw(screen, pool)
 
     while True:
-        for event in pygame.event.get():
+        for event in pygame.event.get(PYGAME_EVENTS):
             if event.type == pygame.QUIT:
+                print("Goodbye!")
                 return
             if event.type == pygame.MOUSEBUTTONUP:
                 # redraw if needed
                 if control(pygame.mouse.get_pos(), event.button):
                     draw(screen, pool)
-                    pygame.display.flip()
 
 
 if __name__ == "__main__":
