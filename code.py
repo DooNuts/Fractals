@@ -1,117 +1,163 @@
-import pygame
-import time
-import numpy as np
-from multiprocessing import Pool
 import os
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+import time
+from multiprocessing import Pool
 
-width, height = 400, 400
-zoom = 0.3
-# don't change zoom_factor, quite buggy, too lazy to fix
-zoom_factor = 2
-xAxis = 1 / zoom
-yAxis = height / (width * zoom)
-camX = -0.5
-camY = 0
-iterations = 100
-iterations_factor = 1.4
+import pygame
+import numpy as np
 
-# zoom in: left click
-# zoom out: right click
-# increase iteration: scroll up
-# decrease iteration: scroll down
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
-xOffset = (-xAxis / 2) + camX
-yOffset = (-yAxis / 2) - camY
-ratio = xAxis / width
+# Window
+WIDTH, HEIGHT = 400, 400
+
+# Zoom
+ZOOM = 0.3
+ZOOM_FACTOR = 2.0  # NOTE: don't change quite buggy, too lazy to fix
+ZOOM_IN_MAX = 1.0e-18  # starts taxing the CPU
+ZOOM_OUT_MAX = 0.2  # too small to see otherwise
+
+# X -
+X_AXIS = 1 / ZOOM
+X_CAM = -0.5
+X_OFFSET = (-X_AXIS / 2) + X_CAM
+
+# Y -
+Y_AXIS = HEIGHT / (WIDTH * ZOOM)
+Y_CAM = 0
+Y_OFFSET = (-Y_AXIS / 2) - Y_CAM
+
+# Iterations
+ITERATIONS = 100
+ITERATIONS_FACTOR = 1.4
+ITERATIONS_MAX = 1000
+ITERATIONS_MIN = 5
+
+# Ratio
+RATIO = X_AXIS / WIDTH
 
 
-def frac(x, y, rat, xOff, yOff, iter):
-    a = (x * rat) + xOff
-    b = (y * rat) + yOff
-    ca = a
-    cb = b
+def mandelbrot_XY(x, y, ratio, x_offset, y_offset, iterations):
+    """
+    calculate the RGB value for the pixel at some (x, y) coordinate
+    """
+    a = ca = (x * ratio) + x_offset
+    b = cb = (y * ratio) + y_offset
     n = 0
     # change lim condition to a * a + b * b < 4 for normal effect
-    while a + b < 40 and n < iter:
+    while a + b < 40 and n < iterations:
         ai = a * a - b * b
         bi = 2 * a * b
-
         a = ai + ca
         b = bi + cb
         n += 1
 
-    m = n / iter
-    
+    m = n / iterations
     # m = np.sqrt(m)
     lin = int(255 * m) % 255
     sin = int(255 * (-np.cos(np.pi * m) + 1) / 2) % 255
-    sqrt = int(255 * np.sqrt(m)) % 255
+    # sqrt = int(255 * np.sqrt(m)) % 255
     sqr = int(255 * (m * m)) % 255
-    r = sqr
-    g = lin
-    b = sin
-    return r, g, b
+    # return pixel rgb value
+    pixel = (sqr, lin, sin)
+    return pixel
 
 
 def control(mouse, button):
-    global xOffset, yOffset, ratio, iterations
-    if button == 1:
-        ratio /= zoom_factor
-        dx = (mouse[0]) * ratio
-        dy = (mouse[1]) * ratio
-        xOffset += dx
-        yOffset += dy
-    elif button == 3:
-        dx = (mouse[0]) * ratio
-        dy = (mouse[1]) * ratio
-        ratio *= zoom_factor
-        xOffset -= dx
-        yOffset -= dy
-    elif button == 4:
-        iterations = int(iterations * iterations_factor)
-    elif button == 5:
-        iterations = int(iterations / iterations_factor)
-    main()
+    """
+    Changes display properties based on the mouse event. Returns a boolean
+    value indicating if the screen should be redrawn.
+    """
+    # ignore events we don't care about
+    if button not in (1, 3, 4, 5):
+        return False
+
+    global X_OFFSET, Y_OFFSET, RATIO, ITERATIONS
+    x_pos, y_pos = mouse
+
+    # click: zoom-in/out
+    if button in (1, 3):
+        old = new = RATIO
+
+        if button == 1:  # left click - zoom in
+            new = max(ZOOM_IN_MAX, RATIO / ZOOM_FACTOR)
+            if new == old:
+                return False
+            X_OFFSET += x_pos * new
+            Y_OFFSET += y_pos * new
+
+        if button == 3:  # right click - zoom out
+            new = min(ZOOM_OUT_MAX, RATIO * ZOOM_FACTOR)
+            if new == old:
+                return False
+            X_OFFSET -= x_pos * old
+            Y_OFFSET -= y_pos * old
+
+        RATIO = new
+        print("RATIO:", old, "->", RATIO )
+        return True
+
+    # scroll: iterations-inc/dec
+    elif button in (4, 5):
+        old = new = ITERATIONS
+
+        if button == 4:  # scroll-up - increase iterations
+            new = min(ITERATIONS_MAX, int(ITERATIONS * ITERATIONS_FACTOR))
+
+        if button == 5:  # scroll-down - decrease iterations
+            new = max(ITERATIONS_MIN, int(ITERATIONS / ITERATIONS_FACTOR))
+
+        if new != old:
+            ITERATIONS = new
+            print("ITERATIONS:", old, "->", ITERATIONS)
+            return True
+
+    return False
 
 
-def process():
-    t1 = time.perf_counter()
-    win = (width, height)
-    screen = pygame.display.set_mode(win)
-    pix = []
-    for x in range(width):
-        for y in range(height):
-            pix.append((x, y, ratio, xOffset, yOffset, iterations))
+def draw(screen, pool):
+    t0 = time.perf_counter()
 
-    p = Pool()
-    pixels = p.starmap(frac, pix)
-    p.close()
-    p.join()
+    pixels = pool.starmap(mandelbrot_XY, [
+        (x, y, RATIO, X_OFFSET, Y_OFFSET, ITERATIONS)
+        for y in range(HEIGHT)
+        for x in range(WIDTH)
+    ])
 
     # array = np.asarray(pixels)
-    # reshaped_array = array.reshape(width, height, 3)
+    # reshaped_array = array.reshape(WIDTH, HEIGHT, 3)
     # pygame.surfarray.blit_array(screen, reshaped_array)
 
-    for x in range(height):
-        for y in range(width):
-            screen.set_at((y, x), pixels[y * height + x])
+    for x in range(HEIGHT):
+        for y in range(WIDTH):
+            screen.set_at((x, y), pixels[y * HEIGHT + x])
 
-    t2 = time.perf_counter()
-    print(t2 - t1)
+    pygame.display.flip()
+
+    print("draw-perf:", time.perf_counter() - t0)
 
 
-def main():
-    process()
-    run = True
-    while run:
+def main(pool):
+    # init the screen
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+    # first draw
+    draw(screen, pool)
+
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                control(pygame.mouse.get_pos(), event.button)
-            pygame.display.update()
+                return
+            if event.type == pygame.MOUSEBUTTONUP:
+                # redraw if needed
+                if control(pygame.mouse.get_pos(), event.button):
+                    draw(screen, pool)
+                    pygame.display.flip()
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    pool = Pool()  # multiprocessing Pool
+
+    try:
+        main(pool)
+    finally:
+        pool.close()
