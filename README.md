@@ -1,10 +1,13 @@
 A Mandelbrot zooming program for my high school project using python. 
 
-Note:
+### Getting Started
 
-```
-zoom in: left click
-zoom out: right click
-increase iteration: scroll up
-decrease iteration: scroll down
-```
+- Requires Python 3+
+- Run `pip install -r requirements.txt` to install requirements
+
+### Notes
+
+- **Zoom in**: left-click
+- **Zoom out**: right-click
+- **Increase iterations**: scroll-up
+- **Decrease iterations**: scroll-down
